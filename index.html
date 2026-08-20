@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Uni-VOC 장학금 챗봇</title>
+<style>
+  :root {
+    /* 영남대(YU) UI 가이드라인 BS-5-01 전용색상 그대로 사용.
+       가이드라인 BS-6-01(사용금지 규정)에 따라 특수색상(Gold/Silver/Green/Yellow)은
+       인증서·메달 등 특정 용도 전용이라 일반 UI 장식에는 쓰지 않고,
+       메인컬러(Blue/Sky Blue) 중심 + 서브컬러(Gray)만 절제해서 사용함. */
+    --yu-blue: #153974;        /* Main - YU Blue (PANTONE 281C) */
+    --yu-blue-dark: #0e2a59;
+    --yu-skyblue: #00aaca;     /* Main - YU Sky Blue (PANTONE 3125C) */
+    --yu-gray: #9d9d9c;        /* Sub - YU Gray */
+    --yu-gray-light: #f1f1f0;
+
+    --bg: #f7f8fa;
+    --bubble-ai: #ffffff;
+    --text-ai: #1c2126;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 브로슈어 표지 / 배너류에 쓰이는 YU 대각선 그래픽 모티프(Navy → Sky Blue)를
+     헤더 배너에 그대로 적용 */
+  header {
+    position: relative;
+    overflow: hidden;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--yu-blue) 0%, var(--yu-blue) 46%, var(--yu-skyblue) 130%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header::before {
+    /* 대각선 하이라이트 띠 - 가이드라인 그래픽 모티프의 절개된 리본 느낌 */
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 55%;
+    height: 220%;
+    background: rgba(255, 255, 255, 0.08);
+    transform: rotate(20deg);
+  }
+  header .title-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1;
+  }
+
+  /* AS-3-02 앱 아이콘 구성(흰 라운드사각형 + YU 마크 + 하단 네이비 라벨바)을 그대로 축소 응용 */
+  .app-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .app-icon .mark {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .app-icon .mark .y { color: var(--yu-skyblue); }
+  .app-icon .mark .u { color: var(--yu-blue); }
+  .app-icon .label {
+    width: 100%;
+    background: var(--yu-blue);
+    color: #fff;
+    font-size: 6.5px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: -0.3px;
+    padding: 2px 0;
+    margin-top: 3px;
+  }
+
+  header h1 {
+    font-size: 16px;
+    margin: 0;
+    color: #ffffff;
+    font-weight: 700;
+  }
+  header .sub {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 46vw;
+  }
+  #reset-btn {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    white-space: nowrap;
+    border: none;
+    background: #ffffff;
+    color: var(--yu-blue);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: background 0.15s;
+  }
+  #reset-btn:hover { background: var(--yu-gray-light); }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+  }
+  .row { display: flex; }
+  .row.ai { justify-content: flex-start; }
+  .row.user { justify-content: flex-end; }
+  .bubble {
+    max-width: 78%;
+    padding: 11px 15px;
+    border-radius: 16px;
+    line-height: 1.55;
+    font-size: 14.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(21, 57, 116, 0.06);
+  }
+  .bubble.ai {
+    background: var(--bubble-ai);
+    color: var(--text-ai);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yu-skyblue);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: var(--yu-blue);
+    color: #ffffff;
+    border-bottom-right-radius: 4px;
+  }
+  .bubble.system {
+    background: transparent;
+    color: var(--yu-gray);
+    font-size: 12px;
+    text-align: center;
+    margin: 4px auto;
+    box-shadow: none;
+  }
+  .bubble.loading {
+    color: var(--yu-gray);
+    font-style: italic;
+    border-left-color: var(--yu-gray);
+  }
+
+  #quick {
+    display: flex;
+    gap: 8px;
+    padding: 10px 18px;
+    flex-wrap: wrap;
+    background: var(--bg);
+  }
+  #quick button {
+    border: 1px solid var(--yu-skyblue);
+    background: #fff;
+    color: var(--yu-skyblue);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  #quick button:hover { background: var(--yu-skyblue); color: #fff; }
+
+  #input-bar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 18px 18px;
+    background: #fff;
+    border-top: 1px solid var(--border);
+  }
+  #msg {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    font-size: 14.5px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #msg:focus { border-color: var(--yu-skyblue); }
+  #send {
+    background: var(--yu-blue);
+    color: #fff;
+    border: none;
+    padding: 0 22px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #send:hover:not(:disabled) { background: var(--yu-skyblue); }
+  #send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #chat::-webkit-scrollbar { width: 8px; }
+  #chat::-webkit-scrollbar-thumb { background: var(--yu-gray); border-radius: 8px; opacity: 0.5; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title-row">
+      <div class="app-icon">
+        <span class="mark"><span class="y">Y</span><span class="u">U</span></span>
+        <span class="label">VOC</span>
+      </div>
+      <div>
+        <h1>Uni-VOC 장학금 챗봇</h1>
+        <div class="sub">조건 물어보고, 장학금 찾고, 신청까지 같이 도와줌</div>
+      </div>
+    </div>
+    <button id="reset-btn">처음부터 다시</button>
+  </header>
+
+  <div id="chat"></div>
+
+  <div id="quick">
+    <button data-msg="목록">📋 후보 목록 다시보기</button>
+    <button data-msg="처음부터">🔄 처음부터</button>
+  </div>
+
+  <div id="input-bar">
+    <input id="msg" type="text" placeholder="메시지를 입력해줘..." autocomplete="off" />
+    <button id="send">전송</button>
+  </div>
+
+<script>
+const chatEl = document.getElementById('chat');
+const msgEl = document.getElementById('msg');
+const sendBtn = document.getElementById('send');
+const resetBtn = document.getElementById('reset-btn');
+
+function addBubble(text, who) {
+  const row = document.createElement('div');
+  row.className = 'row ' + (who === 'user' ? 'user' : 'ai');
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ' + who;
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return bubble;
+}
+
+function addLoading() {
+  const row = document.createElement('div');
+  row.className = 'row ai';
+  row.id = 'loading-row';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ai loading';
+  bubble.textContent = '생각 중...';
+  row.appendChild(bubble);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function removeLoading() {
+  const row = document.getElementById('loading-row');
+  if (row) row.remove();
+}
+
+async function sendMessage(text) {
+  if (!text.trim()) return;
+  addBubble(text, 'user');
+  msgEl.value = '';
+  sendBtn.disabled = true;
+  addLoading();
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = await res.json();
+    removeLoading();
+    addBubble(data.reply, 'ai');
+  } catch (e) {
+    removeLoading();
+    addBubble('에러가 났어: 서버 연결을 확인해줘 (' + e + ')', 'ai');
+  } finally {
+    sendBtn.disabled = false;
+    msgEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', () => sendMessage(msgEl.value));
+msgEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage(msgEl.value);
+});
+document.querySelectorAll('#quick button').forEach((btn) => {
+  btn.addEventListener('click', () => sendMessage(btn.dataset.msg));
+});
+resetBtn.addEventListener('click', async () => {
+  chatEl.innerHTML = '';
+  addBubble('[시스템] 새로 시작할게', 'system');
+  const res = await fetch('/api/reset', { method: 'POST' });
+  const data = await res.json();
+  addBubble(data.reply, 'ai');
+});
+
+// 페이지 로드 시 인삿말 불러오기
+(async function init() {
+  addLoading();
+  try {
+    const res = await fetch('/api/init');
+    const data = await res.json();
+    removeLoading();
+    addBubble(data.reply, 'ai');
+  } catch (e) {
+    removeLoading();
+    addBubble('서버에 연결할 수 없어. app.py가 실행 중인지 확인해줘.', 'ai');
+  }
+})();
+</script>
+</body>
+</html>
